@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Barn Ride Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F3ED;
+    --warm-white: #FDFAF6;
+    --dark: #1C1A17;
+    --mid: #4A4640;
+    --muted: #8A847C;
+    --border: #DDD8D0;
+    --accent: #6B4F2A;
+    --accent-light: #F0E8DC;
+    --green: #3A5C3A;
+    --green-light: #EAF0EA;
+    --amber: #B07D2A;
+    --amber-light: #FBF3E2;
+    --red: #8B3A3A;
+    --red-light: #F5EAEA;
+    --shadow: 0 2px 12px rgba(28,26,23,0.08);
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--dark); min-height: 100vh; }
+
+  header {
+    background: var(--dark);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-family: 'Playfair Display', serif; color: var(--cream); font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+  header .subtitle { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .sync-status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .sync-dot.ok { background: #5A9E5A; }
+  .sync-dot.err { background: #C05A5A; }
+  .sync-dot.spin { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  nav {
+    background: var(--warm-white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    gap: 0;
+  }
+  .nav-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 14px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { color: var(--dark); }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+
+  main { max-width: 820px; margin: 0 auto; padding: 28px 24px; }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 16px;
+  }
+
+  label { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 5px; }
+  input[type="text"], input[type="date"], select, textarea {
+    width: 100%;
+    background: var(--cream);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--dark);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+
+  .form-grid { display: grid; gap: 14px; margin-bottom: 16px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .btn {
+    background: var(--accent);
+    color: var(--cream);
+    border: none;
+    border-radius: 7px;
+    padding: 10px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+  .btn-ghost { background: none; border: 1px solid var(--border); color: var(--mid); }
+  .btn-ghost:hover { background: var(--cream); }
+
+  .horse-toggle { display: flex; gap: 8px; }
+  .htab {
+    flex: 1; border: 1px solid var(--border); border-radius: 7px;
+    padding: 9px; font-size: 13px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; text-align: center; background: var(--cream); color: var(--muted);
+    transition: all 0.15s;
+  }
+  .htab.school { background: var(--amber-light); color: var(--amber); border-color: var(--amber); font-weight: 500; }
+  .htab.own { background: var(--green-light); color: var(--green); border-color: var(--green); font-weight: 500; }
+
+  .rate-hint { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; font-style: italic; }
+
+  .list-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 14px; gap: 10px;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .del-btn { background: none; border: none; cursor: pointer; color: var(--border); font-size: 18px; line-height: 1; padding: 0 2px; transition: color 0.15s; }
+  .del-btn:hover { color: var(--red); }
+
+  .badge {
+    font-size: 11px; font-weight: 500; padding: 2px 9px;
+    border-radius: 20px; white-space: nowrap; letter-spacing: 0.03em;
+  }
+  .b-boarder { background: var(--accent-light); color: var(--accent); }
+  .b-lesson  { background: var(--amber-light); color: var(--amber); }
+  .b-school  { background: var(--amber-light); color: var(--amber); }
+  .b-own     { background: var(--green-light); color: var(--green); }
+  .b-payout  { background: var(--green-light); color: var(--green); }
+
+  .empty { color: var(--muted); font-size: 14px; font-style: italic; text-align: center; padding: 20px 0; }
+
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .metric { background: var(--warm-white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .metric .ml { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+  .metric .mv { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--dark); }
+
+  .bill-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+  .bill-row:last-child { border-bottom: none; }
+  .bill-detail { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .bill-amt { font-weight: 500; font-size: 15px; white-space: nowrap; }
+  .total-row { display: flex; justify-content: space-between; padding-top: 14px; border-top: 2px solid var(--border); font-weight: 500; font-size: 16px; margin-top: 6px; font-family: 'Playfair Display', serif; }
+
+  .mf { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap; }
+  .mf select { width: auto; }
+  .mf .print-btn { margin-left: auto; }
+
+  .loading { text-align: center; padding: 40px; color: var(--muted); font-style: italic; }
+  .error-msg { background: var(--red-light); color: var(--red); border: 1px solid #E5C0C0; border-radius: 7px; padding: 12px 16px; font-size: 13px; margin-bottom: 16px; display: none; }
+
+  .info-note { background: var(--accent-light); border: 1px solid #D4C0A8; border-radius: 7px; padding: 12px 16px; font-size: 13px; color: var(--accent); margin-bottom: 16px; }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    nav { padding: 0 10px; }
+    .nav-btn { padding: 12px 12px; font-size: 13px; }
+    main { padding: 16px 12px; }
+    .g2,.g3,.g4 { grid-template-columns: 1fr; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🐴 Barn Ride Tracker</h1>
+    <div class="subtitle">Lesson billing &amp; owner payouts</div>
+  </div>
+  <div class="sync-status">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Connecting...</span>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-btn active" onclick="showTab('log')">Log a Ride</button>
+  <button class="nav-btn" onclick="showTab('billing')">Billing</button>
+  <button class="nav-btn" onclick="showTab('payouts')">Owner Payouts</button>
+  <button class="nav-btn" onclick="showTab('setup')">Riders &amp; Horses</button>
+</nav>
+
+<main>
+
+  <!-- LOG -->
+  <div id="tab-log" class="section active">
+    <div class="card">
+      <h3>Add a Ride</h3>
+      <div id="log-error" class="error-msg"></div>
+      <div class="form-grid g4">
+        <div>
+          <label>Date</label>
+          <input type="date" id="ride-date" />
+        </div>
+        <div>
+          <label>Rider</label>
+          <select id="ride-rider" onchange="onRiderChange()">
+            <option value="">Select rider...</option>
+          </select>
+        </div>
+        <div>
+          <label>Horse used</label>
+          <div class="horse-toggle">
+            <button class="htab" id="btn-school" onclick="setHorseType('school')">School horse</button>
+            <button class="htab" id="btn-own" onclick="setHorseType('own')">Boarder's horse</button>
+          </div>
+        </div>
+        <div id="horse-col" style="display:none">
+          <label>Horse</label>
+          <select id="ride-horse" onchange="onHorseChange()">
+            <option value="">Select horse...</option>
+          </select>
+        </div>
+      </div>
+      <div class="rate-hint" id="rate-hint"></div>
+      <div style="margin-top:14px">
+        <button class="btn" id="add-ride-btn" onclick="addRide()">+ Add Ride</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Recent Rides</h3>
+      <div id="ride-log"><div class="loading">Loading rides...</div></div>
+    </div>
+  </div>
+
+  <!-- BILLING -->
+  <div id="tab-billing" class="section">
+    <div class="mf">
+      <div><label>Month</label><select id="b-month" onchange="renderBilling()"></select></div>
+      <div><label>Year</label><select id="b-year" onchange="renderBilling()"></select></div>
+      <button class="btn btn-ghost btn-sm print-btn" onclick="window.print()">Print</button>
+    </div>
+    <div id="billing-content"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- PAYOUTS -->
+  <div id="tab-payouts" class="section">
+    <div class="mf">
+      <div><label>Month</label><select id="p-month" onchange="renderPayouts()"></select></div>
+      <div><label>Year</label><select id="p-year" onchange="renderPayouts()"></select></div>
+      <button class="btn btn-ghost btn-sm print-btn" onclick="window.print()">Print</button>
+    </div>
+    <div id="payout-content"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="tab-setup" class="section">
+    <div class="card">
+      <h3>Add Rider</h3>
+      <div id="rider-error" class="error-msg"></div>
+      <div class="form-grid g3">
+        <div><label>Name</label><input type="text" id="new-rider-name" placeholder="Rider name" /></div>
+        <div>
+          <label>Client type</label>
+          <select id="new-rider-type">
+            <option value="boarder">Boarder ($40 / ride)</option>
+            <option value="lesson">Lesson client ($40 own · $55 school)</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn" onclick="addRider()">+ Add Rider</button>
+        </div>
+      </div>
+      <div id="rider-list"><div class="loading">Loading...</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Add Horse</h3>
+      <div class="info-note">Only register horses that lesson students might ride — school horses and boarders' horses that earn the $15 payout. You don't need to add a rider's own personal horse here.</div>
+      <div id="horse-error" class="error-msg"></div>
+      <div class="form-grid g4">
+        <div><label>Horse name</label><input type="text" id="new-horse-name" placeholder="Horse name" /></div>
+        <div>
+          <label>Type</label>
+          <select id="new-horse-type" onchange="toggleOwnerField()">
+            <option value="school">School horse (barn owned)</option>
+            <option value="boarder">Boarder's horse ($15 payout)</option>
+          </select>
+        </div>
+        <div id="owner-field" style="display:none">
+          <label>Owner</label>
+          <select id="new-horse-owner"><option value="">Select boarder...</option></select>
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn" onclick="addHorse()">+ Add Horse</button>
+        </div>
+      </div>
+      <div id="horse-list"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const SHEET_ID = '1lNWUylqg62s-EungsVUbRQIQ1x6hBRFbH-p9bD3TsXQ';
+const API_KEY  = '';  // Uses public sheet access via Apps Script
+const BASE_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}`;
+
+// We use Google Sheets public read via CSV, and write via a published Apps Script web app.
+// Since we can't deploy Apps Script here, we'll use the Sheets API v4 via fetch with the user's OAuth.
+// Instead, we store data using the Google Visualization Query API for reads
+// and direct Sheets API calls for writes (requires user to be signed into Google).
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let riders = [];
+let horses = [];
+let rides  = [];
+let horseType = 'school';
+let loading = false;
+
+// ── Google Sheets via CSV (public read) ──────────────────────────────────────
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Could not read sheet: ' + sheetName);
+  const text = await res.text();
+  return parseCSV(text);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for(let i=0;i<line.length;i++){
+      const c = line[i];
+      if(c==='"') { inQ=!inQ; }
+      else if(c===','&&!inQ) { cols.push(cur.trim()); cur=''; }
+      else cur+=c;
+    }
+    cols.push(cur.trim());
+    return cols;
+  }).filter(r=>r.some(c=>c));
+}
+
+// ── Write via Google Apps Script Web App ─────────────────────────────────────
+// The app writes by appending rows via fetch to a deployed Apps Script.
+// Since we need to deploy one, we'll use a CORS proxy approach with the Sheets API
+// authenticated via the user's existing Google session using gapi.
+
+// Actually the cleanest approach for a shared multi-user app with no backend:
+// Use Google Apps Script as a web app endpoint (free, no server needed)
+// We'll write the Apps Script code and instructions for the user to deploy it.
+
+// For now, implement full read/write using the Apps Script web app URL stored in config.
+const APPS_SCRIPT_URL = localStorage.getItem('barn_script_url') || '';
+
+async function writeToSheet(action, data) {
+  if(!APPS_SCRIPT_URL) {
+    showSetupModal();
+    throw new Error('No Apps Script URL configured');
+  }
+  const url = APPS_SCRIPT_URL + '?action=' + action;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(data)
+  });
+  const text = await res.text();
+  const result = JSON.parse(text);
+  if(result.error) throw new Error(result.error);
+  return result;
+}
+
+async function deleteFromSheet(action, data) {
+  return writeToSheet(action, data);
+}
+
+// ── Setup modal ──────────────────────────────────────────────────────────────
+function showSetupModal() {
+  const existing = document.getElementById('setup-modal');
+  if(existing) { existing.style.display='flex'; return; }
+
+  const modal = document.createElement('div');
+  modal.id = 'setup-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(28,26,23,0.7);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--warm-white);border-radius:12px;padding:32px;max-width:560px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.2);">
+      <h2 style="font-family:'Playfair Display',serif;font-size:20px;margin-bottom:12px;">One-time setup needed</h2>
+      <p style="font-size:14px;color:var(--mid);line-height:1.6;margin-bottom:16px;">
+        To save data to your Google Sheet, you need to deploy a small Google Apps Script (free, takes ~2 minutes).
+      </p>
+      <ol style="font-size:13px;color:var(--mid);line-height:2;padding-left:18px;margin-bottom:20px;">
+        <li>Open your <a href="https://docs.google.com/spreadsheets/d/${SHEET_ID}" target="_blank" style="color:var(--accent)">Google Sheet</a></li>
+        <li>Click <strong>Extensions → Apps Script</strong></li>
+        <li>Delete any existing code and paste in the script below</li>
+        <li>Click <strong>Deploy → New deployment → Web app</strong></li>
+        <li>Set "Who has access" to <strong>Anyone</strong>, click Deploy</li>
+        <li>Copy the Web App URL and paste it below</li>
+      </ol>
+      <div style="background:var(--cream);border:1px solid var(--border);border-radius:7px;padding:12px;font-family:monospace;font-size:11px;line-height:1.6;margin-bottom:16px;max-height:160px;overflow-y:auto;white-space:pre-wrap;">${getAppsScriptCode()}</div>
+      <button onclick="copyScript()" style="font-size:12px;padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--cream);cursor:pointer;margin-bottom:16px;">Copy script</button>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);display:block;margin-bottom:6px;">Web App URL</label>
+        <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;background:var(--cream);font-family:'DM Sans',sans-serif;" />
+      </div>
+      <button onclick="saveScriptUrl()" style="background:var(--accent);color:var(--cream);border:none;border-radius:7px;padding:10px 24px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;width:100%;">Save &amp; Connect</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function getAppsScriptCode() {
+  return `function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var action = e.parameter.action;
+  var ss = SpreadsheetApp.openById('${SHEET_ID}');
+  var result = {};
+  
+  if (action === 'addRider') {
+    var sh = ss.getSheetByName('Riders') || ss.insertSheet('Riders');
+    if (sh.getLastRow() === 0) sh.appendRow(['Name','Type']);
+    sh.appendRow([data.name, data.type]);
+    result = {ok: true};
+  } else if (action === 'deleteRider') {
+    var sh = ss.getSheetByName('Riders');
+    var rows = sh.getDataRange().getValues();
+    for (var i = rows.length-1; i >= 1; i--) {
+      if (rows[i][0] === data.name) { sh.deleteRow(i+1); break; }
+    }
+    result = {ok: true};
+  } else if (action === 'addHorse') {
+    var sh = ss.getSheetByName('Horses') || ss.insertSheet('Horses');
+    if (sh.getLastRow() === 0) sh.appendRow(['Name','Type','Owner']);
+    sh.appendRow([data.name, data.type, data.owner||'']);
+    result = {ok: true};
+  } else if (action === 'deleteHorse') {
+    var sh = ss.getSheetByName('Horses');
+    var rows = sh.getDataRange().getValues();
+    for (var i = rows.length-1; i >= 1; i--) {
+      if (rows[i][0] === data.name) { sh.deleteRow(i+1); break; }
+    }
+    result = {ok: true};
+  } else if (action === 'addRide') {
+    var sh = ss.getSheetByName('Rides') || ss.insertSheet('Rides');
+    if (sh.getLastRow() === 0) sh.appendRow(['Date','Rider','HorseType','HorseName','HorseOwner','Rate','Payout']);
+    sh.appendRow([data.date, data.rider, data.horseType, data.horseName||'', data.horseOwner||'', data.rate, data.payout]);
+    result = {ok: true};
+  } else if (action === 'deleteRide') {
+    var sh = ss.getSheetByName('Rides');
+    var rows = sh.getDataRange().getValues();
+    var count = 0;
+    for (var i = rows.length-1; i >= 1; i--) {
+      if (rows[i][0]===data.date && rows[i][1]===data.rider && String(rows[i][5])===String(data.rate) && count===0) {
+        sh.deleteRow(i+1); count++; break;
+      }
+    }
+    result = {ok: true};
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ok:true}))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+}
+
+function copyScript() {
+  navigator.clipboard.writeText(getAppsScriptCode());
+  event.target.textContent = 'Copied!';
+  setTimeout(()=>event.target.textContent='Copy script', 2000);
+}
+
+function saveScriptUrl() {
+  const url = document.getElementById('script-url-input').value.trim();
+  if(!url.startsWith('https://script.google.com')) { alert('Please enter a valid Apps Script URL.'); return; }
+  localStorage.setItem('barn_script_url', url);
+  location.reload();
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
+async function loadAll() {
+  setSyncStatus('spin', 'Loading...');
+  try {
+    const [riderRows, horseRows, rideRows] = await Promise.all([
+      fetchSheet('Riders'), fetchSheet('Horses'), fetchSheet('Rides')
+    ]);
+    riders = riderRows.map(r=>({ name:r[0], type:r[1] })).filter(r=>r.name);
+    horses = horseRows.map(r=>({ name:r[0], type:r[1], owner:r[2]||'' })).filter(h=>h.name);
+    rides  = rideRows.map(r=>({ date:r[0], rider:r[1], horseType:r[2], horseName:r[3]||'', horseOwner:r[4]||'', rate:parseFloat(r[5])||0, payout:parseFloat(r[6])||0 })).filter(r=>r.date);
+    setSyncStatus('ok', 'Connected');
+    renderAll();
+  } catch(e) {
+    setSyncStatus('err', 'Connection error');
+    console.error(e);
+    // Try to check if sheet is not public
+    showSheetError();
+  }
+}
+
+function showSheetError() {
+  const el = document.getElementById('log-error');
+  el.style.display = 'block';
+  el.textContent = 'Could not connect to Google Sheet. Make sure it is shared as "Anyone with the link can view" and refresh the page.';
+}
+
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+function renderAll() {
+  renderRiderSelect();
+  renderHorseSelect();
+  renderRideLog();
+  renderRiderList();
+  renderHorseList();
+  renderOwnerSelect();
+  if(document.getElementById('tab-billing').classList.contains('active')) renderBilling();
+  if(document.getElementById('tab-payouts').classList.contains('active')) renderPayouts();
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function showTab(t) {
+  const tabs = ['log','billing','payouts','setup'];
+  tabs.forEach((n,i)=>{
+    document.querySelectorAll('.nav-btn')[i].classList.toggle('active', n===t);
+    document.getElementById('tab-'+n).classList.toggle('active', n===t);
+  });
+  if(t==='billing') { populateMonthYear('b-month','b-year'); renderBilling(); }
+  if(t==='payouts') { populateMonthYear('p-month','p-year'); renderPayouts(); }
+  if(t==='setup')   { renderRiderList(); renderHorseList(); }
+}
+
+// ── Horse type toggle ─────────────────────────────────────────────────────────
+function setHorseType(type) {
+  horseType = type;
+  document.getElementById('btn-school').className = 'htab' + (type==='school'?' school':'');
+  document.getElementById('btn-own').className    = 'htab' + (type==='own'?' own':'');
+  document.getElementById('horse-col').style.display = type==='own' ? 'block' : 'none';
+  if(type==='own') renderHorseSelect();
+  updateRateHint();
+}
+
+function renderHorseSelect() {
+  const sel = document.getElementById('ride-horse');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Select horse...</option>';
+  horses.filter(h=>h.type==='boarder').forEach(h=>{
+    const o=document.createElement('option');
+    o.value=h.name;
+    o.textContent=h.name+(h.owner?' ('+h.owner+')':'');
+    sel.appendChild(o);
+  });
+  sel.value=cur;
+}
+
+function onRiderChange() { updateRateHint(); }
+function onHorseChange() { updateRateHint(); }
+
+function rateFor(riderName, hType) {
+  const r = riders.find(x=>x.name===riderName);
+  if(!r) return null;
+  if(r.type==='boarder') return 40;
+  return hType==='school' ? 55 : 40;
+}
+
+function updateRateHint() {
+  const name = document.getElementById('ride-rider').value;
+  const el   = document.getElementById('rate-hint');
+  if(!name) { el.textContent=''; return; }
+  const r = riders.find(x=>x.name===name);
+  if(!r) { el.textContent=''; return; }
+  if(r.type==='boarder') {
+    el.textContent = 'Boarder — $40 per ride';
+  } else if(horseType==='school') {
+    el.textContent = 'Lesson client on school horse — $55';
+  } else {
+    const hName = document.getElementById('ride-horse').value;
+    const h = horses.find(x=>x.name===hName);
+    el.textContent = 'Lesson client on boarder\'s horse — $40' + (h&&h.owner ? '   ·   $15 payout → '+h.owner : '');
+  }
+}
+
+// ── Add ride ──────────────────────────────────────────────────────────────────
+async function addRide() {
+  if(!APPS_SCRIPT_URL) { showSetupModal(); return; }
+  const date  = document.getElementById('ride-date').value;
+  const rider = document.getElementById('ride-rider').value;
+  if(!date||!rider) { showError('log-error','Please fill in date and rider.'); return; }
+  let horseName='', horseOwner='';
+  if(horseType==='own') {
+    horseName = document.getElementById('ride-horse').value;
+    if(!horseName) { showError('log-error','Please select a horse.'); return; }
+    const h = horses.find(x=>x.name===horseName);
+    if(h) horseOwner=h.owner||'';
+  }
+  const rate = rateFor(rider, horseType) || 0;
+  const riderObj = riders.find(x=>x.name===rider);
+  const isLessonOnBoarder = riderObj?.type==='lesson' && horseType==='own';
+  const payout = (isLessonOnBoarder && horseOwner) ? 15 : 0;
+  const rideData = { date, rider, horseType, horseName, horseOwner, rate, payout };
+
+  const btn = document.getElementById('add-ride-btn');
+  btn.disabled=true; btn.textContent='Saving...';
+  setSyncStatus('spin','Saving...');
+  try {
+    await writeToSheet('addRide', rideData);
+    rides.unshift(rideData);
+    renderRideLog();
+    document.getElementById('ride-horse').value='';
+    updateRateHint();
+    hideError('log-error');
+    setSyncStatus('ok','Saved');
+  } catch(e) {
+    showError('log-error', 'Could not save: '+e.message);
+    setSyncStatus('err','Save failed');
+  }
+  btn.disabled=false; btn.textContent='+ Add Ride';
+}
+
+// ── Render ride log ───────────────────────────────────────────────────────────
+function renderRideLog() {
+  const el = document.getElementById('ride-log');
+  const sorted = [...rides].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,50);
+  if(!sorted.length) { el.innerHTML='<div class="empty">No rides logged yet.</div>'; return; }
+  el.innerHTML = sorted.map((r,i)=>{
+    const hBadge = r.horseType==='school'
+      ? '<span class="badge b-school">School horse</span>'
+      : `<span class="badge b-own">Boarder's horse${r.horseName?' · '+r.horseName:''}</span>`;
+    const pBadge = r.payout ? `<span class="badge b-payout" style="margin-left:4px;">$15 → ${r.horseOwner}</span>` : '';
+    return `<div class="list-item">
+      <span style="flex:1;font-size:14px;">${r.date} — <strong>${r.rider}</strong>&ensp;${hBadge}${pBadge}&ensp;<span style="font-size:13px;color:var(--muted);">$${r.rate}</span></span>
+      <button class="del-btn" onclick="deleteRide(${i})" title="Remove">×</button>
+    </div>`;
+  }).join('');
+}
+
+async function deleteRide(i) {
+  const sorted = [...rides].sort((a,b)=>b.date.localeCompare(a.date));
+  const r = sorted[i];
+  if(!confirm('Remove this ride?')) return;
+  setSyncStatus('spin','Saving...');
+  try {
+    await writeToSheet('deleteRide', r);
+    const idx = rides.findIndex(x=>x.date===r.date&&x.rider===r.rider&&x.rate===r.rate);
+    if(idx>-1) rides.splice(idx,1);
+    renderRideLog();
+    setSyncStatus('ok','Saved');
+  } catch(e) { setSyncStatus('err','Error'); alert('Could not delete: '+e.message); }
+}
+
+// ── Riders ────────────────────────────────────────────────────────────────────
+function renderRiderSelect() {
+  const sel=document.getElementById('ride-rider');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Select rider...</option>';
+  riders.forEach(r=>{ const o=document.createElement('option'); o.value=r.name; o.textContent=r.name; sel.appendChild(o); });
+  sel.value=cur;
+}
+
+function renderOwnerSelect() {
+  const sel=document.getElementById('new-horse-owner');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Select boarder...</option>';
+  riders.filter(r=>r.type==='boarder').forEach(r=>{ const o=document.createElement('option'); o.value=r.name; o.textContent=r.name; sel.appendChild(o); });
+  sel.value=cur;
+}
+
+function renderRiderList() {
+  const el=document.getElementById('rider-list');
+  if(!riders.length){ el.innerHTML='<div class="empty">No riders yet.</div>'; return; }
+  el.innerHTML=riders.map((r,i)=>`
+    <div class="list-item">
+      <span>${r.name} <span class="badge ${r.type==='boarder'?'b-boarder':'b-lesson'}">${r.type==='boarder'?'Boarder · $40':'Lesson · $40 own / $55 school'}</span></span>
+      <button class="del-btn" onclick="deleteRider(${i})">×</button>
+    </div>`).join('');
+}
+
+async function addRider() {
+  if(!APPS_SCRIPT_URL) { showSetupModal(); return; }
+  const name=document.getElementById('new-rider-name').value.trim();
+  const type=document.getElementById('new-rider-type').value;
+  if(!name){ showError('rider-error','Enter a rider name.'); return; }
+  if(riders.find(r=>r.name.toLowerCase()===name.toLowerCase())){ showError('rider-error','Rider already exists.'); return; }
+  setSyncStatus('spin','Saving...');
+  try {
+    await writeToSheet('addRider',{name,type});
+    riders.push({name,type});
+    document.getElementById('new-rider-name').value='';
+    renderRiderSelect(); renderRiderList(); renderOwnerSelect();
+    hideError('rider-error'); setSyncStatus('ok','Saved');
+  } catch(e){ showError('rider-error','Could not save: '+e.message); setSyncStatus('err','Error'); }
+}
+
+async function deleteRider(i) {
+  if(!confirm('Remove "'+riders[i].name+'"?')) return;
+  setSyncStatus('spin','Saving...');
+  try {
+    await writeToSheet('deleteRider',{name:riders[i].name});
+    riders.splice(i,1);
+    renderRiderSelect(); renderRiderList(); renderOwnerSelect();
+    setSyncStatus('ok','Saved');
+  } catch(e){ setSyncStatus('err','Error'); alert('Could not delete: '+e.message); }
+}
+
+// ── Horses ────────────────────────────────────────────────────────────────────
+function toggleOwnerField() {
+  document.getElementById('owner-field').style.display =
+    document.getElementById('new-horse-type').value==='boarder' ? 'block' : 'none';
+}
+
+function renderHorseList() {
+  const el=document.getElementById('horse-list');
+  if(!horses.length){ el.innerHTML='<div class="empty">No horses registered yet.</div>'; return; }
+  el.innerHTML=horses.map((h,i)=>`
+    <div class="list-item">
+      <span>${h.name} ${h.type==='school'
+        ? '<span class="badge b-school">School horse</span>'
+        : `<span class="badge b-own">Boarder's horse</span> <span style="font-size:13px;color:var(--muted);">owner: ${h.owner}</span>`}
+      </span>
+      <button class="del-btn" onclick="deleteHorse(${i})">×</button>
+    </div>`).join('');
+}
+
+async function addHorse() {
+  if(!APPS_SCRIPT_URL) { showSetupModal(); return; }
+  const name=document.getElementById('new-horse-name').value.trim();
+  const type=document.getElementById('new-horse-type').value;
+  const owner=type==='boarder'?document.getElementById('new-horse-owner').value:'';
+  if(!name){ showError('horse-error','Enter a horse name.'); return; }
+  if(type==='boarder'&&!owner){ showError('horse-error','Select the horse\'s owner.'); return; }
+  if(horses.find(h=>h.name.toLowerCase()===name.toLowerCase())){ showError('horse-error','Horse already exists.'); return; }
+  setSyncStatus('spin','Saving...');
+  try {
+    await writeToSheet('addHorse',{name,type,owner});
+    horses.push({name,type,owner});
+    document.getElementById('new-horse-name').value='';
+    renderHorseList(); renderHorseSelect();
+    hideError('horse-error'); setSyncStatus('ok','Saved');
+  } catch(e){ showError('horse-error','Could not save: '+e.message); setSyncStatus('err','Error'); }
+}
+
+async function deleteHorse(i) {
+  if(!confirm('Remove "'+horses[i].name+'"?')) return;
+  setSyncStatus('spin','Saving...');
+  try {
+    await writeToSheet('deleteHorse',{name:horses[i].name});
+    horses.splice(i,1);
+    renderHorseList(); renderHorseSelect();
+    setSyncStatus('ok','Saved');
+  } catch(e){ setSyncStatus('err','Error'); alert('Could not delete: '+e.message); }
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+function populateMonthYear(mId,yId) {
+  const ym=document.getElementById(mId), yy=document.getElementById(yId);
+  if(ym.options.length) return;
+  const now=new Date();
+  MONTHS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=m; ym.appendChild(o); });
+  ym.value=now.getMonth()+1;
+  for(let y=now.getFullYear();y>=now.getFullYear()-3;y--){ const o=document.createElement('option'); o.value=y; o.textContent=y; yy.appendChild(o); }
+  yy.value=now.getFullYear();
+}
+
+function renderBilling() {
+  const mo=parseInt(document.getElementById('b-month').value);
+  const yr=parseInt(document.getElementById('b-year').value);
+  const prefix=`${yr}-${String(mo).padStart(2,'0')}`;
+  const filtered=rides.filter(r=>r.date&&r.date.startsWith(prefix));
+  const el=document.getElementById('billing-content');
+  if(!filtered.length){ el.innerHTML=`<div class="card"><div class="empty">No rides for ${MONTHS[mo-1]} ${yr}.</div></div>`; return; }
+  const byRider={};
+  filtered.forEach(r=>{
+    if(!byRider[r.rider]) byRider[r.rider]={school:0,own:0,total:0,riderType:''};
+    const rd=riders.find(x=>x.name===r.rider);
+    byRider[r.rider].riderType=rd?rd.type:'';
+    if(r.horseType==='school') byRider[r.rider].school++;
+    else byRider[r.rider].own++;
+    byRider[r.rider].total+=r.rate||0;
+  });
+  const entries=Object.entries(byRider);
+  const totalBill=entries.reduce((s,[,v])=>s+v.total,0);
+  el.innerHTML=`
+    <div class="metrics">
+      <div class="metric"><div class="ml">Total rides</div><div class="mv">${filtered.length}</div></div>
+      <div class="metric"><div class="ml">Riders billed</div><div class="mv">${entries.length}</div></div>
+      <div class="metric"><div class="ml">Total due</div><div class="mv">$${totalBill.toLocaleString()}</div></div>
+    </div>
+    <div class="card">
+      <h3>${MONTHS[mo-1]} ${yr} — Rider Billing</h3>
+      ${entries.map(([name,v])=>{
+        const isB=v.riderType==='boarder';
+        let detail=[];
+        if(v.school) detail.push(`${v.school} school horse ride${v.school!==1?'s':''} × $${isB?40:55}`);
+        if(v.own)    detail.push(`${v.own} boarder's horse ride${v.own!==1?'s':''} × $40`);
+        return `<div class="bill-row">
+          <div><div>${name} <span class="badge ${isB?'b-boarder':'b-lesson'}">${isB?'Boarder':'Lesson'}</span></div>
+          <div class="bill-detail">${detail.join(' + ')}</div></div>
+          <div class="bill-amt">$${v.total.toLocaleString()}</div>
+        </div>`;
+      }).join('')}
+      <div class="total-row"><span>Total</span><span>$${totalBill.toLocaleString()}</span></div>
+    </div>`;
+}
+
+function renderPayouts() {
+  const mo=parseInt(document.getElementById('p-month').value);
+  const yr=parseInt(document.getElementById('p-year').value);
+  const prefix=`${yr}-${String(mo).padStart(2,'0')}`;
+  const filtered=rides.filter(r=>r.date&&r.date.startsWith(prefix)&&r.payout>0);
+  const el=document.getElementById('payout-content');
+  if(!filtered.length){ el.innerHTML=`<div class="card"><div class="empty">No owner payouts for ${MONTHS[mo-1]} ${yr}.</div></div>`; return; }
+  const byOwner={};
+  filtered.forEach(r=>{
+    if(!byOwner[r.horseOwner]) byOwner[r.horseOwner]={rides:[],total:0};
+    byOwner[r.horseOwner].rides.push(r);
+    byOwner[r.horseOwner].total+=r.payout;
+  });
+  const entries=Object.entries(byOwner);
+  const grand=entries.reduce((s,[,v])=>s+v.total,0);
+  el.innerHTML=`
+    <div class="metrics" style="grid-template-columns:1fr 1fr;">
+      <div class="metric"><div class="ml">Owners owed</div><div class="mv">${entries.length}</div></div>
+      <div class="metric"><div class="ml">Total payouts</div><div class="mv">$${grand.toLocaleString()}</div></div>
+    </div>
+    <div class="card">
+      <h3>${MONTHS[mo-1]} ${yr} — Horse Owner Payouts</h3>
+      ${entries.map(([owner,v])=>{
+        const horseNames=[...new Set(v.rides.map(r=>r.horseName))].filter(Boolean).join(', ');
+        const riderNames=[...new Set(v.rides.map(r=>r.rider))].join(', ');
+        return `<div class="bill-row">
+          <div>
+            <div>${owner} <span class="badge b-boarder">Boarder</span></div>
+            <div class="bill-detail">${v.rides.length} ride${v.rides.length!==1?'s':''} on ${horseNames||'horse'} &nbsp;·&nbsp; riders: ${riderNames}</div>
+          </div>
+          <div class="bill-amt">$${v.total.toLocaleString()}</div>
+        </div>`;
+      }).join('')}
+      <div class="total-row"><span>Total payouts</span><span>$${grand.toLocaleString()}</span></div>
+    </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showError(id, msg) { const el=document.getElementById(id); el.style.display='block'; el.textContent=msg; }
+function hideError(id) { document.getElementById(id).style.display='none'; }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.getElementById('ride-date').value = new Date().toISOString().split('T')[0];
+setHorseType('school');
+populateMonthYear('b-month','b-year');
+populateMonthYear('p-month','p-year');
+
+if(!APPS_SCRIPT_URL) {
+  setTimeout(showSetupModal, 800);
+}
+loadAll();
+</script>
+</body>
+</html>
